@@ -134,6 +134,20 @@ function addTask() {
     input.value = '';
     assigneeInput.value = '';
     priorityInput.value = 'medium'; // 기본값으로 복귀
+
+    // 💡 방금 추가한 업무가 화면에 보이지 않고 숨어버리는 현상 방지!
+    // 1. 검색어 창이나 기간 필터가 켜져 있다면 모두 초기화
+    document.getElementById('searchAssignee').value = '';
+    document.getElementById('dateFilter').value = 'all';
+
+    // 2. 캘린더 모드에서는 마감일이 없는 새 업무가 보이지 않으므로 '상태별 보기'로 자동 전환
+    if (currentViewMode === 'calendar') {
+        document.getElementById('viewMode').value = 'status';
+        toggleViewMode();
+        alert("달력에는 마감일이 있는 업무만 표시됩니다. \n방금 추가한 업무를 확인하기 위해 '상태별 보기'로 전환했습니다!");
+    } else {
+        filterTasks(); // 일반 보기일 경우 필터 해제를 즉시 적용
+    }
 }
 
 function deleteTask(id) {
