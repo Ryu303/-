@@ -45,67 +45,114 @@ initTheme(); // 페이지 로드 시 즉시 테마 초기화 실행
 // ----------------------------------------------------
 // 0. 로그인 기능 (Firebase Authentication)
 // ----------------------------------------------------
+
+// ⭐️ 관리자(Admin)의 Google UID를 여기에 입력하세요.
+// 💡 본인 UID 확인 방법: 로그인 후 개발자 콘솔(F12)에 auth.currentUser.uid 를 입력하고 엔터!
+const ADMIN_UID = "여기에 관리자 UID를 붙여넣으세요"; 
+
+let currentUserProfile = null; // 현재 로그인한 사용자의 DB 프로필 정보
+
 function loginWithGoogle() {
-    console.log("구글 로그인 버튼 클릭됨! 팝업 호출 시도 중...");
     auth.signInWithPopup(provider).then((result) => {
         console.log("로그인 성공:", result.user.displayName);
     }).catch((error) => {
         console.error("로그인 에러:", error);
-        alert('로그인에 실패했습니다. (' + error.message + ')');
+        // 인앱 브라우저 차단 오류 메시지를 더 친절하게 안내
+        if (error.code === 'auth/unauthorized-domain' || error.message.includes('disallowed_useragent')) {
+            alert('보안 정책에 따라 앱 내장 브라우저에서는 로그인이 제한됩니다.\n\n우측 상단 메뉴(점 3개)를 눌러 [다른 브라우저로 열기] 또는 [Chrome에서 열기]를 선택해 주세요!');
+        } else {
+            alert('로그인에 실패했습니다. (' + error.message + ')');
+        }
     });
 }
 
 function logout() {
-    if(confirm('로그아웃 하시겠습니까?')) {
-        auth.signOut().then(() => console.log("로그아웃 완료"));
-    }
+    if(confirm('로그아웃 하시겠습니까?')) { auth.signOut(); }
 }
 
 // 로그인 상태 감지 (실시간)
 auth.onAuthStateChanged((user) => {
+    const adminPanel = document.getElementById('admin-panel');
+
+    if (user) { // 사용자가 로그인한 경우
+        const userRef = db.ref('users/' + user.uid);
+
+        // 사용자의 프로필 정보를 실시간으로 감지합니다.
+        // (관리자가 승인하면 화면이 자동으로 갱신되도록 .on() 사용)
+        userRef.on('value', (snapshot) => {
+            if (!snapshot.exists()) {
+                // 이 사용자가 처음 로그인한 경우, 기본 프로필을 생성합니다.
+                const newProfile = {
+                    displayName: user.displayName,
+                    email: user.email,
+                    approved: false // 기본적으로 '승인되지 않음' 상태
+                };
+                userRef.set(newProfile);
+                currentUserProfile = newProfile;
+            } else {
+                // 기존 사용자인 경우, 프로필 정보를 가져옵니다.
+                currentUserProfile = snapshot.val();
+            }
+
+            // 로그인 상태와 승인 상태에 따라 UI 권한을 업데이트합니다.
+            updateUIPermissions(user, currentUserProfile);
+
+            // 관리자 여부를 확인하고 관리자 패널을 표시/숨김 처리합니다.
+            if (user.uid === ADMIN_UID) {
+                adminPanel.style.display = 'block';
+                listenForUnapprovedUsers(); // 승인 대기 목록 불러오기
+            } else {
+                adminPanel.style.display = 'none';
+            }
+        });
+    } else { // 사용자가 로그아웃한 경우
+        currentUserProfile = null;
+        updateUIPermissions(null, null);
+        if (adminPanel) adminPanel.style.display = 'none';
+    }
+});
+
+// UI 요소들의 활성화/비활성화 상태를 업데이트하는 함수
+function updateUIPermissions(user, profile) {
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const userInfo = document.getElementById('user-info');
     const taskInput = document.getElementById('taskInput');
-    // '추가' 버튼을 더 정확하게 선택합니다.
     const addTaskBtn = document.querySelector('.task-input-area button');
     const assigneeInput = document.getElementById('assigneeInput');
     const priorityInput = document.getElementById('priorityInput');
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.querySelector('.upload-area button');
 
-    if (user) { // 로그인 된 상태
-        loginBtn.style.display = 'none';
-        logoutBtn.style.display = 'inline-block';
-        userInfo.textContent = `${user.displayName}님 환영합니다!`;
+    const isLoggedIn = !!user;
+    const isApproved = isLoggedIn && profile && profile.approved;
 
-        // 로그인 시 업무 추가 기능 활성화
-        taskInput.disabled = false;
-        addTaskBtn.disabled = false;
-        assigneeInput.disabled = false;
-        priorityInput.disabled = false;
-        taskInput.placeholder = "새로운 업무를 입력하세요...";
-        
-        // 파일 업로드 기능 활성화
-        fileInput.disabled = false;
-        uploadBtn.disabled = false;
-    } else { // 로그아웃 된 상태
-        loginBtn.style.display = 'inline-block';
-        logoutBtn.style.display = 'none';
+    // 로그인/로그아웃 버튼 표시
+    loginBtn.style.display = isLoggedIn ? 'none' : 'inline-block';
+    logoutBtn.style.display = isLoggedIn ? 'inline-block' : 'none';
+
+    if (isLoggedIn) {
+        if (isApproved) {
+            // [상태 1] 로그인 O, 승인 O
+            userInfo.textContent = `${user.displayName}님 환영합니다!`;
+            [taskInput, addTaskBtn, assigneeInput, priorityInput, fileInput, uploadBtn].forEach(el => el.disabled = false);
+            quill.enable(true); // Quill 에디터 활성화
+            taskInput.placeholder = "새로운 업무를 입력하세요...";
+        } else {
+            // [상태 2] 로그인 O, 승인 X
+            userInfo.textContent = `관리자의 승인을 기다리고 있습니다.`;
+            [taskInput, addTaskBtn, assigneeInput, priorityInput, fileInput, uploadBtn].forEach(el => el.disabled = true);
+            quill.enable(false); // Quill 에디터 비활성화
+            taskInput.placeholder = "승인 대기 중에는 업무를 추가할 수 없습니다.";
+        }
+    } else {
+        // [상태 3] 로그아웃
         userInfo.textContent = '';
-
-        // 로그아웃 시 업무 추가 기능 비활성화
-        taskInput.disabled = true;
-        addTaskBtn.disabled = true;
-        assigneeInput.disabled = true;
-        priorityInput.disabled = true;
+        [taskInput, addTaskBtn, assigneeInput, priorityInput, fileInput, uploadBtn].forEach(el => el.disabled = true);
+        quill.enable(false); // Quill 에디터 비활성화
         taskInput.placeholder = "로그인 후 업무를 추가할 수 있습니다.";
-        
-        // 파일 업로드 기능 비활성화
-        fileInput.disabled = true;
-        uploadBtn.disabled = true;
     }
-});
+}
 
 // ----------------------------------------------------
 // 1. 칸반 보드 기능
@@ -117,6 +164,11 @@ function addTask() {
     const assignee = assigneeInput.value.trim();
     const priorityInput = document.getElementById('priorityInput');
     const priority = priorityInput.value;
+
+    if (!currentUserProfile || !currentUserProfile.approved) {
+        alert('관리자의 승인 후 업무를 추가할 수 있습니다.');
+        return;
+    }
 
     if (!title) return;
 
@@ -151,6 +203,10 @@ function addTask() {
 }
 
 function deleteTask(id) {
+    if (!currentUserProfile || !currentUserProfile.approved) {
+        alert('승인된 사용자만 업무를 삭제할 수 있습니다.');
+        return;
+    }
     if(confirm('이 업무를 삭제할까요?')) { db.ref('tasks/' + id).remove(); }
 }
 
@@ -160,6 +216,10 @@ function drop(ev, newStatus) {
     ev.preventDefault();
     const taskId = ev.dataTransfer.getData("text");
     if (taskId) { 
+        if (!currentUserProfile || !currentUserProfile.approved) {
+            alert('승인된 사용자만 상태를 변경할 수 있습니다.');
+            return;
+        }
         db.ref('tasks/' + taskId).update({ status: newStatus })
             .catch((error) => {
                 console.error("이동 실패:", error);
@@ -253,6 +313,10 @@ function closeModal() {
 }
 
 function saveDescription() {
+    if (!currentUserProfile || !currentUserProfile.approved) {
+        alert('승인된 사용자만 상세 내용을 저장할 수 있습니다.');
+        return;
+    }
     if (!currentModalTaskId) return;
     const newDesc = document.getElementById('modalDescription').value.trim();
     const newDueDate = document.getElementById('modalDueDate').value;
@@ -273,6 +337,40 @@ window.addEventListener('click', (e) => {
         closeModal();
     }
 });
+
+// ----------------------------------------------------
+// 관리자 기능
+// ----------------------------------------------------
+// 승인 대기 중인 사용자 목록을 불러오는 함수
+function listenForUnapprovedUsers() {
+    // 'approved'가 false인 사용자만 필터링해서 가져옵니다.
+    db.ref('users').orderByChild('approved').equalTo(false).on('value', (snapshot) => {
+        const userListEl = document.getElementById('user-approval-list');
+        userListEl.innerHTML = '';
+        const users = snapshot.val();
+        if (!users) {
+            userListEl.innerHTML = '<li>승인 대기 중인 사용자가 없습니다.</li>';
+            return;
+        }
+
+        Object.keys(users).forEach(uid => {
+            const user = users[uid];
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span>${user.displayName} (${user.email})</span>
+                <button onclick="approveUser('${uid}', '${user.displayName}')">승인</button>
+            `;
+            userListEl.appendChild(li);
+        });
+    });
+}
+
+// 사용자를 승인하는 함수
+function approveUser(uid, name) {
+    if (confirm(`'${name}' 사용자의 수정을 허용하시겠습니까?`)) {
+        db.ref('users/' + uid).update({ approved: true });
+    }
+}
 
 // ----------------------------------------------------
 // 데이터 렌더링 및 뷰 모드 제어
@@ -534,6 +632,8 @@ const quill = new Quill('#editor-container', {
 // 사용자가 에디터에 타이핑할 때 Firebase로 변경된 HTML 전송
 quill.on('text-change', function(delta, oldDelta, source) {
     if (source === 'user') {
+        // UI에서 비활성화 되어있지만, 만약을 위한 이중 방어 코드
+        if (!currentUserProfile || !currentUserProfile.approved) return;
         isTyping = true;
         db.ref('sharedNote').set(quill.root.innerHTML);
         
@@ -559,6 +659,11 @@ function uploadFile() {
     const file = fileInput.files[0];
     const statusMsg = document.getElementById('uploadStatus');
     const currentUser = auth.currentUser;
+
+    if (!currentUserProfile || !currentUserProfile.approved) {
+        alert('승인된 사용자만 파일을 업로드할 수 있습니다.');
+        return;
+    }
 
     if (!file) return alert('파일을 선택해주세요.');
     if (!currentUser) return alert('로그인 후 파일을 업로드할 수 있습니다.');
@@ -595,6 +700,11 @@ function uploadFile() {
 
 // 파일 삭제 기능
 function deleteFile(fileId, filePath) {
+    if (!currentUserProfile || !currentUserProfile.approved) {
+        alert('승인된 사용자만 파일을 삭제할 수 있습니다.');
+        return;
+    }
+
     if (!confirm(`이 파일을 정말 삭제하시겠습니까?\n(${filePath})`)) return;
 
     // 1. Storage에서 파일 삭제
