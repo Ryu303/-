@@ -675,8 +675,17 @@ quill.on('text-change', function(delta, oldDelta, source) {
         isTyping = true;
         db.ref('sharedNote').set(quill.root.innerHTML);
         
+        // 타이핑 상태를 DB에 브로드캐스트
+        db.ref('typingStatus').set({
+            name: currentUserProfile.displayName,
+            time: Date.now()
+        });
+        
         clearTimeout(window.typingTimer);
-        window.typingTimer = setTimeout(() => { isTyping = false; }, 1000);
+        window.typingTimer = setTimeout(() => { 
+            isTyping = false; 
+            db.ref('typingStatus').remove(); // 1초 동안 입력이 없으면 상태 삭제
+        }, 1000);
     }
 });
 
