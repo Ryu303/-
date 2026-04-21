@@ -48,8 +48,7 @@ initTheme(); // 페이지 로드 시 즉시 테마 초기화 실행
 
 // ⭐️ 관리자(Admin)의 Google UID를 여기에 입력하세요.
 // 💡 본인 UID 확인 방법: 로그인 후 개발자 콘솔(F12)에 auth.currentUser.uid 를 입력하고 엔터!
-const ADMIN_UID = "여기에 관리자 UID를 붙여넣으세요"; 
-
+const ADMIN_UID = "jaGugunGReXytCgbqYwQUybxyJL2"; 
 let currentUserProfile = null; // 현재 로그인한 사용자의 DB 프로필 정보
 
 function loginWithGoogle() {
@@ -85,13 +84,19 @@ auth.onAuthStateChanged((user) => {
                 const newProfile = {
                     displayName: user.displayName,
                     email: user.email,
-                    approved: false // 기본적으로 '승인되지 않음' 상태
+                    approved: user.uid === ADMIN_UID // 관리자는 처음부터 자동 승인!
                 };
                 userRef.set(newProfile);
                 currentUserProfile = newProfile;
             } else {
                 // 기존 사용자인 경우, 프로필 정보를 가져옵니다.
                 currentUserProfile = snapshot.val();
+                
+                // 만약 관리자인데 DB에 미승인 상태로 남아있다면 즉시 승인 처리
+                if (user.uid === ADMIN_UID && !currentUserProfile.approved) {
+                    db.ref('users/' + user.uid).update({ approved: true });
+                    currentUserProfile.approved = true;
+                }
             }
 
             // 로그인 상태와 승인 상태에 따라 UI 권한을 업데이트합니다.
