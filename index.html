@@ -25,6 +25,7 @@
         <!-- 2. 로그인/로그아웃 버튼 및 사용자 정보 표시 영역 추가 -->
         <div id="auth-section">
             <button id="theme-toggle" onclick="toggleTheme()" class="icon-btn" title="다크 모드 전환">🌙</button>
+            <img id="user-avatar" src="" alt="프로필" style="display: none;">
             <span id="user-info"></span>
             <button id="login-btn" onclick="loginWithGoogle()">구글 로그인</button>
             <button id="logout-btn" onclick="logout()" style="display: none;">로그아웃</button>
@@ -133,6 +134,7 @@
         <div class="bottom-grid">
             <div class="section notes-section">
                 <h2>실시간 공유 문서</h2>
+                <div id="typing-indicator" class="typing-indicator"></div>
                 <!-- 기존 textarea 대신 Quill 에디터 컨테이너 사용 -->
                 <div id="editor-container"></div>
             </div>

@@ -84,6 +84,7 @@ auth.onAuthStateChanged((user) => {
                 const newProfile = {
                     displayName: user.displayName,
                     email: user.email,
+                    photoURL: user.photoURL || '',
                     approved: user.uid === ADMIN_UID // 관리자는 처음부터 자동 승인!
                 };
                 userRef.set(newProfile);
@@ -122,6 +123,7 @@ function updateUIPermissions(user, profile) {
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const userInfo = document.getElementById('user-info');
+    const userAvatar = document.getElementById('user-avatar');
     const taskInput = document.getElementById('taskInput');
     const addTaskBtn = document.querySelector('.task-input-area button');
     const assigneeInput = document.getElementById('assigneeInput');
@@ -137,6 +139,9 @@ function updateUIPermissions(user, profile) {
     logoutBtn.style.display = isLoggedIn ? 'inline-block' : 'none';
 
     if (isLoggedIn) {
+        userAvatar.src = user.photoURL || 'https://via.placeholder.com/32';
+        userAvatar.style.display = 'block';
+        
         if (isApproved) {
             // [상태 1] 로그인 O, 승인 O
             userInfo.textContent = `${user.displayName}님 환영합니다!`;
@@ -153,6 +158,7 @@ function updateUIPermissions(user, profile) {
     } else {
         // [상태 3] 로그아웃
         userInfo.textContent = '';
+        userAvatar.style.display = 'none';
         [taskInput, addTaskBtn, assigneeInput, priorityInput, fileInput, uploadBtn].forEach(el => el.disabled = true);
         quill.enable(false); // Quill 에디터 비활성화
         taskInput.placeholder = "로그인 후 업무를 추가할 수 있습니다.";
@@ -680,6 +686,22 @@ db.ref('sharedNote').on('value', (snapshot) => {
         if (quill.root.innerHTML !== content) {
             quill.root.innerHTML = content;
         }
+    }
+});
+
+// 다른 사용자의 타이핑 상태 감지
+db.ref('typingStatus').on('value', (snapshot) => {
+    const indicator = document.getElementById('typing-indicator');
+    const data = snapshot.val();
+    
+    if (data && data.name && (Date.now() - data.time < 3000)) {
+        // 본인이 입력 중일 때는 텍스트를 띄우지 않습니다.
+        if (currentUserProfile && data.name === currentUserProfile.displayName) return indicator.classList.remove('active');
+        
+        indicator.textContent = `✍️ ${data.name}님이 작성 중입니다...`;
+        indicator.classList.add('active');
+    } else {
+        indicator.classList.remove('active');
     }
 });
 

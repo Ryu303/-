@@ -53,6 +53,15 @@ body {
     gap: 1rem;
 }
 
+#user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
 #user-info {
     font-weight: 600;
     color: var(--primary);
@@ -381,6 +390,17 @@ button:disabled {
 .ql-snow .ql-fill { fill: var(--text-main) !important; }
 .ql-snow .ql-picker { color: var(--text-main) !important; }
 .ql-snow .ql-picker-options { background-color: var(--card-bg) !important; border-color: var(--border-color) !important; }
+
+.typing-indicator {
+    height: 20px;
+    font-size: 0.85rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.typing-indicator.active { opacity: 1; }
 
 .upload-area { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
 #fileInput { flex: 1; padding: 0.5rem; border: 1px dashed var(--border-color); border-radius: 6px; background-color: var(--col-bg); }
