@@ -525,3 +525,57 @@ button:disabled {
 .user-list li button:hover { background-color: #059669; }
 .user-list li button.revoke-btn { background-color: #FEE2E2; color: var(--danger); }
 .user-list li button.revoke-btn:hover { background-color: var(--danger); color: white; }
+
+/* ==================== 
+   간트 차트 뷰
+==================== */
+.gantt-container {
+    width: 100%;
+    overflow-x: auto;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem 0;
+}
+.gantt-header {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    width: max-content;
+}
+.gantt-day {
+    min-width: 40px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border-right: 1px dashed var(--border-color);
+    box-sizing: border-box;
+}
+.gantt-day.today { color: var(--primary); font-weight: bold; background-color: rgba(99, 102, 241, 0.05); }
+.gantt-body { position: relative; min-height: 150px; width: max-content; }
+.gantt-row {
+    display: flex; align-items: center; height: 44px;
+    border-bottom: 1px dashed var(--border-color); position: relative;
+}
+.gantt-row:hover { background-color: var(--col-bg); }
+.gantt-row-label {
+    position: sticky; left: 0; background-color: var(--card-bg); z-index: 10;
+    width: 180px; min-width: 180px; font-size: 0.85rem; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    padding: 0 1rem; border-right: 2px solid var(--border-color); display: flex; align-items: center;
+}
+.gantt-row:hover .gantt-row-label { background-color: var(--col-bg); }
+.gantt-bar-area { position: relative; flex: 1; height: 100%; }
+.gantt-bar {
+    position: absolute; top: 8px; height: 28px; border-radius: 6px;
+    display: flex; align-items: center; padding: 0 0.5rem;
+    font-size: 0.75rem; color: white; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.1s, filter 0.1s;
+}
+.gantt-bar:hover { transform: translateY(-2px); filter: brightness(0.9); z-index: 5; }
+.gantt-bar-label {
+    position: absolute; top: 12px; font-size: 0.75rem; font-weight: bold; color: var(--text-muted);
+    white-space: nowrap;
+}

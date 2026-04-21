@@ -42,6 +42,7 @@
                         <option value="status">상태별 보기</option>
                         <option value="timeline">일정별 보기</option>
                         <option value="calendar">캘린더 보기</option>
+                        <option value="gantt">간트 차트</option>
                     </select>
                     <select id="dateFilter" onchange="filterTasks()" class="search-input">
                         <option value="all">전체 기간</option>
@@ -114,6 +115,12 @@
                 </div>
                 <div class="calendar-grid" id="calendar-grid"></div>
             </div>
+
+            <!-- 4. 신규: 간트 차트 보드 (기본 숨김) -->
+            <div id="board-gantt" class="gantt-container" style="display: none;">
+                <div id="gantt-header" class="gantt-header"></div>
+                <div id="gantt-body" class="gantt-body"></div>
+            </div>
         </div>
 
         <!-- 관리자용 사용자 승인 패널 (기본 숨김) -->
@@ -160,6 +167,8 @@
             </div>
             <div class="modal-body">
                 <div class="modal-date-picker">
+                    <label for="modalStartDate">시작일:</label>
+                    <input type="date" id="modalStartDate">
                     <label for="modalDueDate">마감일:</label>
                     <input type="date" id="modalDueDate">
                 </div>

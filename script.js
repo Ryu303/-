@@ -186,10 +186,17 @@ function addTask() {
     // 로그인한 사용자 정보 가져오기 (비로그인 상태면 '익명'으로 처리)
     const currentUser = auth.currentUser;
     const authorName = currentUser ? currentUser.displayName : '익명';
+    
+    // 기본 시작일(startDate)을 오늘 날짜로 자동 지정
+    const today = new Date();
+    const startDateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
     // Date.now() 대신 파이어베이스의 고유 키(push)를 사용하여 충돌 방지
     const newTaskRef = db.ref('tasks').push();
-    newTaskRef.set({ id: newTaskRef.key, title: title, status: 'todo', author: authorName, assignee: assignee, priority: priority })
+    newTaskRef.set({ 
+        id: newTaskRef.key, title: title, status: 'todo', 
+        author: authorName, assignee: assignee, priority: priority, startDate: startDateString 
+    })
         .catch((error) => {
             console.error("업무 추가 에러:", error);
             alert("업무 추가 실패! 파이어베이스 데이터베이스 규칙을 확인해주세요. (" + error.message + ")");
@@ -303,6 +310,14 @@ function filterTasks() {
         if (assignee.includes(searchTerm)) { taskEl.style.display = 'block'; }
         else { taskEl.style.display = 'none'; }
     });
+
+    // 간트 차트 보기 모드일 때의 담당자 필터링
+    const ganttRows = document.querySelectorAll('.gantt-row');
+    ganttRows.forEach(row => {
+        const assignee = (row.dataset.assignee || '').toLowerCase();
+        if (assignee.includes(searchTerm)) { row.style.display = 'flex'; }
+        else { row.style.display = 'none'; }
+    });
 }
 
 // ----------------------------------------------------
@@ -310,10 +325,11 @@ function filterTasks() {
 // ----------------------------------------------------
 let currentModalTaskId = null;
 
-function openModal(taskId, title, description, dueDate) {
+function openModal(taskId, title, description, dueDate, startDate) {
     currentModalTaskId = taskId;
     document.getElementById('modalTitle').textContent = title;
     document.getElementById('modalDescription').value = description || '';
+    document.getElementById('modalStartDate').value = startDate || '';
     document.getElementById('modalDueDate').value = dueDate || '';
     document.getElementById('taskModal').style.display = 'flex';
 }
@@ -330,9 +346,10 @@ function saveDescription() {
     }
     if (!currentModalTaskId) return;
     const newDesc = document.getElementById('modalDescription').value.trim();
+    const newStartDate = document.getElementById('modalStartDate').value;
     const newDueDate = document.getElementById('modalDueDate').value;
     
-    db.ref('tasks/' + currentModalTaskId).update({ description: newDesc, dueDate: newDueDate })
+    db.ref('tasks/' + currentModalTaskId).update({ description: newDesc, startDate: newStartDate, dueDate: newDueDate })
         .then(() => {
             closeModal();
         }).catch(error => {
@@ -422,6 +439,7 @@ function toggleViewMode() {
     document.getElementById('board-status').style.display = 'none';
     document.getElementById('board-timeline').style.display = 'none';
     document.getElementById('board-calendar').style.display = 'none';
+    document.getElementById('board-gantt').style.display = 'none';
 
     if (currentViewMode === 'status') {
         document.getElementById('board-status').style.display = 'flex';
@@ -429,6 +447,8 @@ function toggleViewMode() {
         document.getElementById('board-timeline').style.display = 'flex';
     } else if (currentViewMode === 'calendar') {
         document.getElementById('board-calendar').style.display = 'flex';
+    } else if (currentViewMode === 'gantt') {
+        document.getElementById('board-gantt').style.display = 'block';
     }
     renderTasks(); // 모드가 바뀌면 화면을 다시 그립니다.
 }
@@ -512,13 +532,100 @@ function renderCalendar(tasksArray) {
                 }
                 
                 // 클릭 시 모달 열기
-                taskEl.onclick = () => openModal(task.id, task.title, task.description, task.dueDate);
+                taskEl.onclick = () => openModal(task.id, task.title, task.description, task.dueDate, task.startDate);
                 cell.appendChild(taskEl);
             }
         });
         
         grid.appendChild(cell);
     }
+}
+
+function renderGantt(tasksArray) {
+    const header = document.getElementById('gantt-header');
+    const body = document.getElementById('gantt-body');
+    
+    // 헤더 초기화 (고정된 왼쪽 열)
+    header.innerHTML = '<div class="gantt-row-label" style="border-right: 2px solid var(--border-color); border-bottom: none; background: transparent;">업무명</div>';
+    body.innerHTML = '';
+
+    // 1. 전체 업무 중 가장 빠른 시작일과 가장 늦은 마감일 찾기
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+    const todayTime = new Date().setHours(0,0,0,0);
+
+    tasksArray.forEach(t => {
+        const start = t.startDate ? new Date(t.startDate).setHours(0,0,0,0) : todayTime;
+        let due = t.dueDate ? new Date(t.dueDate).setHours(0,0,0,0) : start;
+        if (due < start) due = start; // 마감일이 시작일보다 빠르면 보정
+
+        if (start < minTime) minTime = start;
+        if (due > maxTime) maxTime = due;
+    });
+
+    if (minTime === Infinity) { minTime = todayTime; maxTime = todayTime + (7 * 24 * 60 * 60 * 1000); }
+
+    // 양옆으로 5일씩 여유 공간을 둡니다.
+    const startDay = new Date(minTime - (5 * 24 * 60 * 60 * 1000));
+    const endDay = new Date(maxTime + (5 * 24 * 60 * 60 * 1000));
+    const totalDays = Math.ceil((endDay - startDay) / (1000 * 60 * 60 * 24)) + 1;
+
+    // 2. 날짜 헤더 그리기
+    for (let i = 0; i < totalDays; i++) {
+        const d = new Date(startDay.getTime() + (i * 24 * 60 * 60 * 1000));
+        const dayEl = document.createElement('div');
+        dayEl.className = 'gantt-day';
+        if (d.getTime() === todayTime) dayEl.classList.add('today');
+        dayEl.textContent = `${d.getMonth() + 1}/${d.getDate()}`;
+        header.appendChild(dayEl);
+    }
+
+    // 3. 차트 바디(막대) 그리기
+    tasksArray.forEach(task => {
+        const startT = task.startDate ? new Date(task.startDate).setHours(0,0,0,0) : todayTime;
+        let dueT = task.dueDate ? new Date(task.dueDate).setHours(0,0,0,0) : startT;
+        if (dueT < startT) dueT = startT;
+
+        const startIndex = Math.round((startT - startDay.getTime()) / (1000 * 60 * 60 * 24));
+        const duration = Math.round((dueT - startT) / (1000 * 60 * 60 * 24)) + 1;
+
+        const row = document.createElement('div');
+        row.className = 'gantt-row';
+        row.dataset.assignee = task.assignee || '미지정'; // 필터용
+
+        // 왼쪽 라벨
+        const label = document.createElement('div');
+        label.className = 'gantt-row-label';
+        label.textContent = task.title;
+        label.title = task.title;
+        
+        // 바(Bar) 영역
+        const barArea = document.createElement('div');
+        barArea.className = 'gantt-bar-area';
+        
+        const bar = document.createElement('div');
+        bar.className = 'gantt-bar';
+        bar.style.left = `${startIndex * 40}px`; // 하루 너비를 40px로 계산
+        bar.style.width = `${duration * 40}px`;
+        bar.textContent = task.assignee || '미지정';
+        
+        if (task.priority === 'high') bar.style.backgroundColor = 'var(--danger)';
+        else if (task.priority === 'low') bar.style.backgroundColor = '#10B981';
+        else bar.style.backgroundColor = '#F59E0B';
+
+        if (task.status === 'done') {
+            bar.style.opacity = '0.5';
+            bar.style.backgroundColor = 'var(--text-muted)';
+            bar.style.textDecoration = 'line-through';
+        }
+
+        bar.onclick = () => openModal(task.id, task.title, task.description, task.dueDate, task.startDate);
+
+        barArea.appendChild(bar);
+        row.appendChild(label);
+        row.appendChild(barArea);
+        body.appendChild(row);
+    });
 }
 
 function renderTasks() {
@@ -565,6 +672,12 @@ function renderTasks() {
         return;
     }
 
+    if (currentViewMode === 'gantt') {
+        renderGantt(tasksArray);
+        filterTasks(); 
+        return;
+    }
+
     tasksArray.forEach(task => {
         const div = document.createElement('div');
         div.className = 'task-card';
@@ -580,7 +693,7 @@ function renderTasks() {
         // 카드를 클릭하면 모달 창 열기 (삭제 버튼 클릭 시에는 열리지 않음)
         div.onclick = (e) => {
             if(e.target.classList.contains('delete-btn')) return;
-            openModal(task.id, task.title, task.description, task.dueDate);
+            openModal(task.id, task.title, task.description, task.dueDate, task.startDate);
         };
         
         // 검색을 위해 담당자 정보를 data 속성에 저장합니다.
