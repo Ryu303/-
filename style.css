@@ -503,3 +503,5 @@ button:disabled {
 .user-list li span { font-weight: 600; }
 .user-list li button { background-color: #10B981; } /* 초록색 승인 버튼 */
 .user-list li button:hover { background-color: #059669; }
+.user-list li button.revoke-btn { background-color: #FEE2E2; color: var(--danger); }
+.user-list li button.revoke-btn:hover { background-color: var(--danger); color: white; }

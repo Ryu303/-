@@ -105,7 +105,7 @@ auth.onAuthStateChanged((user) => {
             // 관리자 여부를 확인하고 관리자 패널을 표시/숨김 처리합니다.
             if (user.uid === ADMIN_UID) {
                 adminPanel.style.display = 'block';
-                listenForUnapprovedUsers(); // 승인 대기 목록 불러오기
+                listenForUsers(); // 사용자 전체 목록 불러오기
             } else {
                 adminPanel.style.display = 'none';
             }
@@ -346,27 +346,47 @@ window.addEventListener('click', (e) => {
 // ----------------------------------------------------
 // 관리자 기능
 // ----------------------------------------------------
-// 승인 대기 중인 사용자 목록을 불러오는 함수
-function listenForUnapprovedUsers() {
-    // 'approved'가 false인 사용자만 필터링해서 가져옵니다.
-    db.ref('users').orderByChild('approved').equalTo(false).on('value', (snapshot) => {
-        const userListEl = document.getElementById('user-approval-list');
-        userListEl.innerHTML = '';
+// 전체 사용자 목록을 불러와서 대기자와 멤버로 나누어 표시하는 함수
+function listenForUsers() {
+    db.ref('users').on('value', (snapshot) => {
+        const approvalListEl = document.getElementById('user-approval-list');
+        const memberListEl = document.getElementById('user-member-list');
+        
+        approvalListEl.innerHTML = '';
+        memberListEl.innerHTML = '';
+        
         const users = snapshot.val();
         if (!users) {
-            userListEl.innerHTML = '<li>승인 대기 중인 사용자가 없습니다.</li>';
+            approvalListEl.innerHTML = '<li>대기 중인 사용자가 없습니다.</li>';
+            memberListEl.innerHTML = '<li>멤버가 없습니다.</li>';
             return;
         }
+
+        let pendingCount = 0;
+        let memberCount = 0;
 
         Object.keys(users).forEach(uid => {
             const user = users[uid];
             const li = document.createElement('li');
-            li.innerHTML = `
-                <span>${user.displayName} (${user.email})</span>
-                <button onclick="approveUser('${uid}', '${user.displayName}')">승인</button>
-            `;
-            userListEl.appendChild(li);
+            
+            if (!user.approved) {
+                li.innerHTML = `<span>${user.displayName} <small style="color: var(--text-muted); font-weight: normal;">(${user.email})</small></span>
+                                <button onclick="approveUser('${uid}', '${user.displayName}')">승인</button>`;
+                approvalListEl.appendChild(li);
+                pendingCount++;
+            } else {
+                const isMe = uid === ADMIN_UID;
+                const actionBtn = isMe ? `<span style="font-size: 0.8rem; color: var(--primary); font-weight: bold;">최고 관리자</span>` 
+                                       : `<button class="revoke-btn" onclick="revokeUser('${uid}', '${user.displayName}')">해제</button>`;
+                li.innerHTML = `<span>${user.displayName} <small style="color: var(--text-muted); font-weight: normal;">(${user.email})</small></span>
+                                ${actionBtn}`;
+                memberListEl.appendChild(li);
+                memberCount++;
+            }
         });
+        
+        if (pendingCount === 0) approvalListEl.innerHTML = '<li>승인 대기 중인 사용자가 없습니다.</li>';
+        if (memberCount === 0) memberListEl.innerHTML = '<li>현재 워크스페이스에 참여 중인 멤버가 없습니다.</li>';
     });
 }
 
@@ -374,6 +394,13 @@ function listenForUnapprovedUsers() {
 function approveUser(uid, name) {
     if (confirm(`'${name}' 사용자의 수정을 허용하시겠습니까?`)) {
         db.ref('users/' + uid).update({ approved: true });
+    }
+}
+
+// 사용자 승인을 취소(해제)하는 함수
+function revokeUser(uid, name) {
+    if (confirm(`'${name}' 사용자의 권한을 해제하시겠습니까?\n더 이상 데이터를 수정하거나 추가할 수 없게 됩니다.`)) {
+        db.ref('users/' + uid).update({ approved: false });
     }
 }
 

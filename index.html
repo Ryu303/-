@@ -117,8 +117,17 @@
 
         <!-- 관리자용 사용자 승인 패널 (기본 숨김) -->
         <div class="section" id="admin-panel" style="display: none;">
-            <h2>사용자 승인 관리</h2>
-            <ul id="user-approval-list" class="user-list"></ul>
+            <h2>사용자 관리 (관리자 전용)</h2>
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px;">
+                    <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;">대기 중인 사용자</h3>
+                    <ul id="user-approval-list" class="user-list"></ul>
+                </div>
+                <div style="flex: 1; min-width: 300px;">
+                    <h3 style="font-size: 1rem; color: var(--primary); margin-bottom: 1rem;">워크스페이스 멤버</h3>
+                    <ul id="user-member-list" class="user-list"></ul>
+                </div>
+            </div>
         </div>
 
         <div class="bottom-grid">
