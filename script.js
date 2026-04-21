@@ -555,8 +555,18 @@ function renderGantt(tasksArray) {
     const todayTime = new Date().setHours(0,0,0,0);
 
     tasksArray.forEach(t => {
-        const start = t.startDate ? new Date(t.startDate).setHours(0,0,0,0) : todayTime;
-        let due = t.dueDate ? new Date(t.dueDate).setHours(0,0,0,0) : start;
+        let start = todayTime;
+        if (t.startDate) {
+            const parsedStart = new Date(t.startDate).setHours(0,0,0,0);
+            if (!isNaN(parsedStart)) start = parsedStart;
+        }
+        
+        let due = start;
+        if (t.dueDate) {
+            const parsedDue = new Date(t.dueDate).setHours(0,0,0,0);
+            if (!isNaN(parsedDue)) due = parsedDue;
+        }
+        
         if (due < start) due = start; // 마감일이 시작일보다 빠르면 보정
 
         if (start < minTime) minTime = start;
@@ -582,8 +592,18 @@ function renderGantt(tasksArray) {
 
     // 3. 차트 바디(막대) 그리기
     tasksArray.forEach(task => {
-        const startT = task.startDate ? new Date(task.startDate).setHours(0,0,0,0) : todayTime;
-        let dueT = task.dueDate ? new Date(task.dueDate).setHours(0,0,0,0) : startT;
+        let startT = todayTime;
+        if (task.startDate) {
+            const parsedStart = new Date(task.startDate).setHours(0,0,0,0);
+            if (!isNaN(parsedStart)) startT = parsedStart;
+        }
+        
+        let dueT = startT;
+        if (task.dueDate) {
+            const parsedDue = new Date(task.dueDate).setHours(0,0,0,0);
+            if (!isNaN(parsedDue)) dueT = parsedDue;
+        }
+        
         if (dueT < startT) dueT = startT;
 
         const startIndex = Math.round((startT - startDay.getTime()) / (1000 * 60 * 60 * 24));
