@@ -532,11 +532,18 @@ async function saveDescription() {
         return;
     }
     if (!currentModalTaskId) return;
+    
+    const newTitle = document.getElementById('modalTitleInput').value.trim();
     const newDesc = document.getElementById('modalDescription').value.trim();
     const newStartDate = document.getElementById('modalStartDate').value;
     const newDueDate = document.getElementById('modalDueDate').value;
     
-    db.ref('tasks/' + currentModalTaskId).update({ description: newDesc, startDate: newStartDate, dueDate: newDueDate })
+    if (!newTitle) {
+        await customAlert('업무 제목을 입력해주세요.');
+        return;
+    }
+    
+    db.ref('tasks/' + currentModalTaskId).update({ title: newTitle, description: newDesc, startDate: newStartDate, dueDate: newDueDate })
         .then(() => {
             closeModal();
         }).catch(async error => {
