@@ -14,12 +14,30 @@
     --col-bg: #F9FAFB;
 }
 
+/* 다크 모드 색상표 */
+[data-theme="dark"] {
+    --bg-color: #111827;
+    --card-bg: #1F2937;
+    --col-bg: #374151;
+    --text-main: #F9FAFB;
+    --text-muted: #9CA3AF;
+    --border-color: #4B5563;
+}
+
 body {
     margin: 0;
     padding: 0;
     font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-main);
+}
+
+/* Material Symbols (모던 아이콘) 공통 설정 */
+.material-symbols-rounded {
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+    line-height: 1;
+    display: inline-block;
 }
 
 /* ==================== 
@@ -122,10 +140,68 @@ button:disabled {
     gap: 1.5rem;
 }
 
+/* ==================== 
+   탭(Tab) 메뉴
+==================== */
+.tab-menu {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.tab-btn {
+    background-color: transparent;
+    color: var(--text-muted);
+    border: none;
+    border-radius: 12px 12px 0 0;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: none;
+    white-space: nowrap;
+}
+.tab-btn:hover {
+    background-color: var(--col-bg);
+    color: var(--text-main);
+}
+.tab-btn.active {
+    background-color: var(--card-bg);
+    color: var(--primary);
+    border: 2px solid var(--border-color);
+    border-bottom: 2px solid var(--card-bg);
+    margin-bottom: -2px; /* 겹치게 해서 아래 선 가리기 */
+}
+.tab-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+[data-theme="dark"] .tab-btn.active {
+    border-bottom-color: var(--card-bg);
+}
+
 /* 모바일 반응형 */
 @media (max-width: 768px) {
     .bottom-grid { grid-template-columns: 1fr; }
     .header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+
+    /* 모바일에서 칸반 보드 스와이프(스냅) 최적화 */
+    .kanban-board {
+        scroll-snap-type: x mandatory;
+        padding-bottom: 1rem;
+    }
+    .column {
+        min-width: 85vw;
+        scroll-snap-align: center;
+    }
 }
 
 /* ==================== 
@@ -246,11 +322,44 @@ button:disabled {
     cursor: not-allowed;
 }
 
+/* ==================== 
+   커스텀 드롭다운(선택창) 화살표 디자인
+==================== */
+select.search-input, #priorityInput {
+    appearance: none; /* OS 기본 화살표와 투박한 디자인 제거 */
+    -webkit-appearance: none;
+    /* 세련된 미니멀 화살표 SVG 삽입 */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center; /* 화살표 위치 */
+    background-size: 1rem;
+    padding-right: 2.2rem !important; /* 글씨가 화살표를 침범하지 않게 여백 확보 */
+}
+#viewMode { /* 파란색 버튼 위에는 하얀색 화살표 적용 */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+}
+[data-theme="dark"] select.search-input:not(#viewMode), [data-theme="dark"] #priorityInput {
+    /* 다크 모드에서는 화살표를 밝은 회색으로 자동 반전 */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+/* 드롭다운 하위 메뉴(Option) 폰트 및 테마 색상 적용 */
+select option {
+    background-color: var(--card-bg);
+    color: var(--text-main);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.5rem;
+}
+
 .kanban-board {
     display: flex;
     gap: 1.2rem;
     overflow-x: auto;
     padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch; /* iOS 등에서 부드러운 관성 스크롤 지원 */
+    scroll-behavior: smooth;
 }
 
 .column {
@@ -324,6 +433,22 @@ button:disabled {
 }
 
 /* ==================== 
+   뷰 모드 범례 (Legend) & 시각화 스타일
+==================== */
+.view-legend {
+    display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;
+    padding: 0.8rem 1.2rem; background-color: var(--col-bg); border-radius: 8px; border: 1px solid rgba(226, 232, 240, 0.6);
+}
+.legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+.legend-color { width: 14px; height: 14px; border-radius: 4px; display: inline-block; box-shadow: var(--shadow-sm); }
+.task-done-style {
+    background-color: #F3F4F6 !important; /* 차분하고 밝은 회색 */
+    color: #6B7280 !important; /* 진한 회색 텍스트로 가독성 확보 */
+    text-decoration: line-through;
+    border: 1px solid #D1D5DB !important;
+}
+
+/* ==================== 
    캘린더 뷰 
 ==================== */
 .calendar-controls {
@@ -357,6 +482,7 @@ button:disabled {
 .calendar-task {
     font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.5rem; border-radius: 6px; cursor: pointer;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white;
+    display: flex; align-items: center; gap: 4px;
     box-shadow: var(--shadow-sm); transition: transform 0.1s;
 }
 .calendar-task:hover { filter: brightness(0.9); transform: translateY(-1px); }
@@ -403,8 +529,40 @@ button:disabled {
 .typing-indicator.active { opacity: 1; }
 
 .upload-area { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
-#fileInput { flex: 1; padding: 0.5rem; border: 1px dashed var(--border-color); border-radius: 6px; background-color: var(--col-bg); }
-#fileInput:disabled { background-color: #E5E7EB; cursor: not-allowed; }
+.file-input-hidden {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+.file-input-label {
+    background-color: var(--col-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+}
+.file-input-label:hover {
+    background-color: var(--border-color);
+    color: var(--primary);
+}
+.file-name-display {
+    flex: 1;
+    align-self: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 0.5rem;
+}
 .status-msg { font-size: 0.85rem; color: var(--primary); min-height: 1.2rem; margin-bottom: 1rem; }
 .file-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .file-list li { 
@@ -417,7 +575,14 @@ button:disabled {
     align-items: center;
 }
 .file-list li a { text-decoration: none; color: var(--text-main); font-size: 0.95rem; display: flex; align-items: center; }
-.file-list li a:before { content: "📄"; margin-right: 0.5rem; }
+.file-list li a:before { 
+    content: "article"; 
+    font-family: 'Material Symbols Rounded'; 
+    margin-right: 0.5rem; 
+    color: var(--text-muted); 
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+    vertical-align: middle;
+}
 
 .file-delete-btn {
     padding: 0.3rem 0.6rem;
@@ -463,24 +628,52 @@ button:disabled {
 
 .modal-date-picker {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
-.modal-date-picker label {
-    font-size: 0.9rem;
+.date-input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.date-input-group label {
+    font-size: 0.85rem;
     font-weight: 600;
+    color: var(--text-muted);
 }
 
-.modal-date-picker input[type="date"] {
-    padding: 0.4rem 0.6rem;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-family: inherit;
+.date-select-btn {
+    background-color: var(--col-bg);
+    border: 1px dashed var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+    text-align: center;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
     outline: none;
+    font-family: inherit;
+    font-size: 0.95rem;
 }
-.modal-date-picker input[type="date"]:focus { border-color: var(--primary); }
+.date-select-btn:hover, .date-select-btn:focus {
+    background-color: rgba(99, 102, 241, 0.05);
+    border-style: solid;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+.date-select-btn::placeholder {
+    color: var(--primary);
+    opacity: 0.8;
+}
+
+/* Flatpickr 달력 폰트 및 디자인 연동 */
+.flatpickr-calendar { font-family: 'Pretendard Variable', Pretendard, sans-serif !important; box-shadow: var(--shadow-lg) !important; border: 1px solid var(--border-color) !important; }
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover, .flatpickr-day.selected.prevMonthDay, .flatpickr-day.startRange.prevMonthDay, .flatpickr-day.endRange.prevMonthDay, .flatpickr-day.selected.nextMonthDay, .flatpickr-day.startRange.nextMonthDay, .flatpickr-day.endRange.nextMonthDay {
+    background: var(--primary) !important; border-color: var(--primary) !important;
+}
 
 .modal-body textarea {
     width: 100%; height: 150px; padding: 0.75rem;
@@ -531,11 +724,16 @@ button:disabled {
 ==================== */
 .gantt-container {
     width: 100%;
-    overflow-x: auto;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 1rem 0;
+}
+.gantt-scroll-area {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* iOS 등에서 부드러운 관성 스크롤 지원 */
+    scroll-behavior: smooth;
 }
 .gantt-header {
     display: flex;
@@ -570,6 +768,7 @@ button:disabled {
 .gantt-bar {
     position: absolute; top: 8px; height: 28px; border-radius: 6px;
     display: flex; align-items: center; padding: 0 0.5rem;
+    gap: 4px;
     font-size: 0.75rem; color: white; font-weight: 600;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.1s, filter 0.1s;
@@ -578,4 +777,90 @@ button:disabled {
 .gantt-bar-label {
     position: absolute; top: 12px; font-size: 0.75rem; font-weight: bold; color: var(--text-muted);
     white-space: nowrap;
+}
+
+/* ==================== 
+   출장 업무 관리 (Business Trips)
+==================== */
+.trip-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+.trip-card {
+    background-color: var(--card-bg);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+.trip-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+.trip-card.past-trip {
+    opacity: 0.5;
+    background-color: var(--col-bg);
+}
+.trip-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.trip-title { font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.2rem; }
+.trip-date { font-size: 0.8rem; color: var(--primary); font-weight: 600; }
+.trip-info-row { font-size: 0.85rem; color: var(--text-main); display: flex; gap: 0.5rem; align-items: flex-start; }
+.trip-info-icon { opacity: 0.7; }
+
+.trip-attachment-btns { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.trip-attach-btn {
+    background-color: var(--col-bg); color: var(--text-main); border: 1px solid var(--border-color);
+    padding: 0.5rem 0.8rem; font-size: 0.8rem; border-radius: 8px; cursor: pointer; flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    box-shadow: none; font-weight: 600; transition: all 0.2s;
+}
+.trip-attach-btn:hover {
+    background-color: var(--border-color); transform: translateY(-1px);
+}
+
+/* ==================== 
+   토스트 알림 (Toast)
+==================== */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 10000;
+    pointer-events: none; /* 클릭 방해 방지 */
+}
+.toast {
+    background-color: var(--card-bg);
+    color: var(--text-main);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    min-width: 260px;
+    pointer-events: auto; /* 토스트 자체는 클릭 가능하게 */
+}
+.toast.toast-warning { border-left-color: #F59E0B; }
+.toast.fade-out { animation: fadeOutRight 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+[data-theme="dark"] .toast { box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6); border-color: var(--border-color); border-left-color: var(--primary); }
+[data-theme="dark"] .toast.toast-warning { border-left-color: #F59E0B; }
+
+@keyframes slideInRight {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(120%); opacity: 0; }
 }
