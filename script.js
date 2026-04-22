@@ -514,7 +514,7 @@ let currentModalTaskId = null;
 
 function openModal(taskId, title, description, dueDate, startDate) {
     currentModalTaskId = taskId;
-    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalTitleInput').value = title;
     document.getElementById('modalDescription').value = description || '';
     document.getElementById('modalStartDate').value = startDate || '';
     document.getElementById('modalDueDate').value = dueDate || '';
@@ -545,19 +545,20 @@ async function saveDescription() {
         });
 }
 
-// 모달 창 바깥 배경 클릭 시 닫기
-window.addEventListener('click', (e) => {
-    const modal = document.getElementById('taskModal');
-    if (e.target === modal) closeModal();
-    
-    const tripModal = document.getElementById('tripModal');
-    if (e.target === tripModal) closeTripModal();
+// 엔터키로 모달 저장(확인) 동작 연동 (배경 클릭 닫기 기능 제거됨)
+document.getElementById('taskModal').addEventListener('keydown', (e) => {
+    // 상세 설명(textarea)이나 버튼에 포커스가 있을 때는 줄바꿈 등의 기본 동작 유지
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+        e.preventDefault();
+        saveDescription();
+    }
+});
 
-    const tripGroupModal = document.getElementById('tripGroupModal');
-    if (e.target === tripGroupModal) closeTripGroupModal();
-
-    const commonCalendarModal = document.getElementById('commonCalendarModal');
-    if (e.target === commonCalendarModal) closeCommonCalendarModal();
+document.getElementById('tripModal').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+        e.preventDefault();
+        saveTrip();
+    }
 });
 
 // ----------------------------------------------------
@@ -949,7 +950,7 @@ function renderGantt(tasksArray) {
     const todayTime = new Date().setHours(0,0,0,0);
     
     // 헤더 초기화 (고정된 왼쪽 열)
-    header.innerHTML = '<div class="gantt-row-label" style="border-right: 2px solid var(--border-color); border-bottom: none; background: transparent;">업무명</div>';
+    header.innerHTML = '<div class="gantt-row-label" style="border-right: 2px solid var(--border-color); border-bottom: none; background-color: var(--card-bg); z-index: 20;">업무명</div>';
     body.innerHTML = '';
 
     // 1. 현재 선택된 월의 시작일과 마지막일 계산
@@ -2074,8 +2075,16 @@ function renderMyPage() {
     const myName = currentUserProfile.displayName;
     const myUid = auth.currentUser.uid;
 
+    // 이름 매칭 로직: 띄어쓰기를 무시하고, 콤마(,)나 슬래시(/)로 구분된 여러 명의 이름을 똑똑하게 각각 검사합니다.
+    const searchName = myName.replace(/\s+/g, '').toLowerCase();
+    const isMatched = (assigneeStr) => {
+        if (!assigneeStr) return false;
+        const names = assigneeStr.split(/[,/]+/).map(s => s.replace(/\s+/g, '').toLowerCase());
+        return names.some(n => n.includes(searchName) || searchName.includes(n));
+    };
+
     // 1. 내 업무 필터링
-    const myTasks = Object.values(globalTasksData).filter(t => (t.assignee || '').includes(myName));
+    const myTasks = Object.values(globalTasksData).filter(t => isMatched(t.assignee));
     if (myTasks.length === 0) {
         tasksList.innerHTML = '<li style="justify-content: center; color: var(--text-muted); font-size: 0.9rem;">할당된 업무가 없습니다.</li>';
     } else {
@@ -2102,7 +2111,7 @@ function renderMyPage() {
     }
 
     // 2. 내 출장 필터링
-    const myTrips = Object.values(globalTripsData).filter(t => (t.assignee || '').includes(myName));
+    const myTrips = Object.values(globalTripsData).filter(t => isMatched(t.assignee));
     if (myTrips.length === 0) {
         tripsList.innerHTML = '<li style="justify-content: center; color: var(--text-muted); font-size: 0.9rem;">예정된 출장이 없습니다.</li>';
     } else {

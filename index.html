@@ -31,8 +31,11 @@
 <body>
     <div class="header">
         <div class="header-titles">
-            <h1>FaWW Workspace</h1>
-            <p>칸반 보드, 실시간 문서, 파일 드라이브</p>
+            <img src="로고 이미지 파일.png" alt="FaWW 로고" class="header-logo">
+            <div class="header-text">
+                <h1>FaWW Workspace</h1>
+                <p>칸반 보드, 실시간 문서, 파일 드라이브</p>
+            </div>
         </div>
         <!-- 2. 로그인/로그아웃 버튼 및 사용자 정보 표시 영역 추가 -->
         <div id="auth-section">
@@ -308,7 +311,7 @@
     <div id="taskModal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">업무 상세</h3>
+                <input type="text" id="modalTitleInput" class="search-input" style="font-size: 1.15rem; font-weight: bold; flex: 1; margin-right: 1rem; padding: 0.5rem 0.8rem;" placeholder="업무 제목을 입력하세요">
                 <button class="close-btn" onclick="closeModal()" title="닫기"><span class="material-symbols-rounded">close</span></button>
             </div>
             <div class="modal-body">
