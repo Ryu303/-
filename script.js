@@ -205,6 +205,7 @@ auth.onAuthStateChanged((user) => {
                 }
             }
             renderLeaveUI(); // 유저 프로필이 로드되면 내 휴가 현황 갱신
+            renderMyPage(); // 마이페이지 현황 갱신
 
             // 로그인 상태와 승인 상태에 따라 UI 권한을 업데이트합니다.
             updateUIPermissions(user, currentUserProfile);
@@ -224,6 +225,7 @@ auth.onAuthStateChanged((user) => {
         if (document.getElementById('tab-btn-admin')) {
             document.getElementById('tab-btn-admin').style.display = 'none';
         }
+        renderMyPage();
         switchTab('tab-tasks', document.querySelector('.tab-btn')); // 첫번째 탭으로 강제 이동
     }
 });
@@ -708,15 +710,18 @@ function listenForUsers() {
             const user = users[uid];
             const li = document.createElement('li');
             
+            // 이름에 작은따옴표(')가 포함된 경우 발생하는 클릭 버튼 버그 방지
+            const safeName = user.displayName ? user.displayName.replace(/'/g, "\\'") : '이름없음';
+            
             if (!user.approved) {
                 li.innerHTML = `<span>${user.displayName} <small style="color: var(--text-muted); font-weight: normal;">(${user.email})</small></span>
-                                <button onclick="approveUser('${uid}', '${user.displayName}')">승인</button>`;
+                                <button onclick="approveUser('${uid}', '${safeName}')">승인</button>`;
                 approvalListEl.appendChild(li);
                 pendingCount++;
             } else {
                 const isMe = uid === ADMIN_UID;
                 const actionBtn = isMe ? `<span style="font-size: 0.8rem; color: var(--primary); font-weight: bold;">최고 관리자</span>` 
-                                       : `<button class="revoke-btn" onclick="revokeUser('${uid}', '${user.displayName}')">해제</button>`;
+                                       : `<button class="revoke-btn" onclick="revokeUser('${uid}', '${safeName}')">해제</button>`;
                 li.innerHTML = `<span>${user.displayName} <small style="color: var(--text-muted); font-weight: normal;">(${user.email})</small></span>
                                 ${actionBtn}`;
                 memberListEl.appendChild(li);
@@ -732,14 +737,20 @@ function listenForUsers() {
 // 사용자를 승인하는 함수
 async function approveUser(uid, name) {
     if (await customConfirm(`'${name}' 사용자의 수정을 허용하시겠습니까?`)) {
-        db.ref('users/' + uid).update({ approved: true });
+        db.ref('users/' + uid).update({ approved: true }).catch(async (error) => {
+            console.error("사용자 승인 에러:", error);
+            await customAlert("승인 실패! 파이어베이스 보안 규칙(Rules)에 관리자 UID가 일치하는지 확인해주세요.");
+        });
     }
 }
 
 // 사용자 승인을 취소(해제)하는 함수
 async function revokeUser(uid, name) {
     if (await customConfirm(`'${name}' 사용자의 권한을 해제하시겠습니까?\n더 이상 데이터를 수정하거나 추가할 수 없게 됩니다.`)) {
-        db.ref('users/' + uid).update({ approved: false });
+        db.ref('users/' + uid).update({ approved: false }).catch(async (error) => {
+            console.error("권한 해제 에러:", error);
+            await customAlert("해제 실패! 파이어베이스 보안 규칙(Rules)을 확인해주세요.");
+        });
     }
 }
 
@@ -1345,6 +1356,7 @@ function renderTasks() {
 db.ref('tasks').on('value', (snapshot) => {
     globalTasksData = snapshot.val() || {};
     renderTasks();
+    renderMyPage();
 });
 
 // ----------------------------------------------------
@@ -1474,6 +1486,7 @@ async function deleteTrip(id) {
 db.ref('businessTrips').on('value', (snapshot) => {
     globalTripsData = snapshot.val() || {};
     renderTasks(); // 캘린더와 간트 차트에도 즉시 렌더링 반영
+    renderMyPage();
     
     const tripList = document.getElementById('trip-list');
     if (!tripList) return;
@@ -2012,6 +2025,7 @@ db.ref('leaves').on('value', (snapshot) => {
     globalLeavesData = snapshot.val() || {};
     renderTasks(); // 캘린더/간트 차트에 휴가(🌴) 자동 표시
     renderLeaveUI(); // 내 휴가 현황 UI 업데이트
+    renderMyPage(); // 마이페이지 업데이트
     
     // 관리자 권한이 있으면 관리자 패널도 즉시 업데이트
     if (auth.currentUser && auth.currentUser.uid === ADMIN_UID) {
@@ -2034,3 +2048,105 @@ db.ref('leaves').on('value', (snapshot) => {
     }
     isFirstLeavesLoad = false;
 });
+
+// ----------------------------------------------------
+// 5. 마이페이지 렌더링 (내 업무, 출장, 휴가)
+// ----------------------------------------------------
+function renderMyPage() {
+    const tasksList = document.getElementById('mypage-tasks');
+    const tripsList = document.getElementById('mypage-trips');
+    const leavesList = document.getElementById('mypage-leaves');
+    
+    if (!tasksList || !tripsList || !leavesList) return;
+    
+    tasksList.innerHTML = '';
+    tripsList.innerHTML = '';
+    leavesList.innerHTML = '';
+
+    if (!auth.currentUser || !currentUserProfile) {
+        const loginMsg = '<li style="justify-content: center; color: var(--text-muted); font-size: 0.9rem;">로그인 후 확인 가능합니다.</li>';
+        tasksList.innerHTML = loginMsg;
+        tripsList.innerHTML = loginMsg;
+        leavesList.innerHTML = loginMsg;
+        return;
+    }
+
+    const myName = currentUserProfile.displayName;
+    const myUid = auth.currentUser.uid;
+
+    // 1. 내 업무 필터링
+    const myTasks = Object.values(globalTasksData).filter(t => (t.assignee || '').includes(myName));
+    if (myTasks.length === 0) {
+        tasksList.innerHTML = '<li style="justify-content: center; color: var(--text-muted); font-size: 0.9rem;">할당된 업무가 없습니다.</li>';
+    } else {
+        myTasks.sort((a, b) => (a.dueDate || '9999-99-99').localeCompare(b.dueDate || '9999-99-99')).forEach(task => {
+            const li = document.createElement('li');
+            li.style.flexDirection = 'column';
+            li.style.alignItems = 'flex-start';
+            li.style.gap = '0.4rem';
+            li.style.cursor = 'pointer';
+            li.onclick = () => openModal(task.id, task.title, task.description, task.dueDate, task.startDate);
+            
+            let statusStr = task.status === 'todo' ? '시작 전' : (task.status === 'doing' ? '진행 중' : '완료');
+            let statusColor = task.status === 'done' ? 'var(--text-muted)' : 'var(--primary)';
+            
+            li.innerHTML = `
+                <div style="font-weight: 600; font-size: 0.95rem; ${task.status === 'done' ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${task.title}</div>
+                <div style="font-size: 0.8rem; display: flex; gap: 0.8rem; color: var(--text-muted);">
+                    <span>상태: <strong style="color: ${statusColor};">${statusStr}</strong></span>
+                    <span>마감: ${task.dueDate || '미정'}</span>
+                </div>
+            `;
+            tasksList.appendChild(li);
+        });
+    }
+
+    // 2. 내 출장 필터링
+    const myTrips = Object.values(globalTripsData).filter(t => (t.assignee || '').includes(myName));
+    if (myTrips.length === 0) {
+        tripsList.innerHTML = '<li style="justify-content: center; color: var(--text-muted); font-size: 0.9rem;">예정된 출장이 없습니다.</li>';
+    } else {
+        myTrips.sort((a, b) => (a.date || '9999-99-99').localeCompare(b.date || '9999-99-99')).forEach(trip => {
+            const li = document.createElement('li');
+            li.style.flexDirection = 'column';
+            li.style.alignItems = 'flex-start';
+            li.style.gap = '0.4rem';
+            li.style.cursor = 'pointer';
+            li.onclick = () => openTripModal(trip.id, trip.name, trip.date, trip.assignee, trip.contact, trip.address, trip.scheduleUrl, trip.schedulePath, trip.qrUrl, trip.qrPath);
+            
+            li.innerHTML = `
+                <div style="font-weight: 600; font-size: 0.95rem;">${trip.name}</div>
+                <div style="font-size: 0.8rem; display: flex; gap: 0.8rem; color: var(--text-muted);">
+                    <span>날짜: <strong style="color: #8B5CF6;">${trip.date || '미정'}</strong></span>
+                    <span>장소: ${trip.address ? trip.address.substring(0, 10) + '...' : '미정'}</span>
+                </div>
+            `;
+            tripsList.appendChild(li);
+        });
+    }
+
+    // 3. 내 휴가 필터링
+    const myLeaves = Object.values(globalLeavesData).filter(l => l.uid === myUid);
+    if (myLeaves.length === 0) {
+        leavesList.innerHTML = '<li style="justify-content: center; color: var(--text-muted); font-size: 0.9rem;">신청한 휴가가 없습니다.</li>';
+    } else {
+        myLeaves.sort((a, b) => b.timestamp - a.timestamp).forEach(l => {
+            const typeStr = l.type === 1 ? '연차' : (l.subType === '0.5pm' ? '오후 반차' : '오전 반차');
+            let statusText = l.status === 'approved' ? '승인됨' : (l.status === 'pending' ? '대기 중' : (l.status === 'rejected' ? '반려됨' : (l.status === 'canceled' ? '취소됨' : '취소 대기')));
+            let statusColor = l.status === 'approved' ? '#10B981' : (l.status === 'pending' ? '#F59E0B' : (l.status === 'rejected' ? 'var(--danger)' : 'var(--text-muted)'));
+
+            const li = document.createElement('li');
+            li.style.flexDirection = 'column';
+            li.style.alignItems = 'flex-start';
+            li.style.gap = '0.4rem';
+            
+            li.innerHTML = `
+                <div style="font-weight: 600; font-size: 0.95rem;">${l.date} <span style="font-weight: normal; color: var(--text-muted); font-size: 0.85rem;">(${typeStr})</span></div>
+                <div style="font-size: 0.8rem; display: flex; gap: 0.8rem; color: var(--text-muted);">
+                    <span>상태: <strong style="color: ${statusColor};">${statusText}</strong></span>
+                </div>
+            `;
+            leavesList.appendChild(li);
+        });
+    }
+}

@@ -51,6 +51,7 @@
             <button class="tab-btn" onclick="switchTab('tab-trips', this)"><span class="material-symbols-rounded" style="vertical-align:middle; margin-right:4px;">flight_takeoff</span> 출장 관리</button>
             <button class="tab-btn" onclick="switchTab('tab-leaves', this)"><span class="material-symbols-rounded" style="vertical-align:middle; margin-right:4px;">beach_access</span> 휴가 결재</button>
             <button id="tab-btn-admin" class="tab-btn" onclick="switchTab('tab-admin', this)" style="display: none;"><span class="material-symbols-rounded" style="vertical-align:middle; margin-right:4px;">admin_panel_settings</span> 사용자 관리</button>
+            <button class="tab-btn" onclick="switchTab('tab-mypage', this)"><span class="material-symbols-rounded" style="vertical-align:middle; margin-right:4px;">person</span> 마이페이지</button>
         </div>
 
         <!-- 탭 1: 업무 현황 (칸반 + 문서/파일) -->
@@ -277,6 +278,29 @@
                 </div>
             </div>
         </div>
+        </div>
+
+        <!-- 탭 5: 마이페이지 -->
+        <div id="tab-mypage" class="tab-content" style="display: none;">
+            <div class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--bg-color);">
+                    <h2 style="margin: 0; padding: 0; border: none;"><span class="material-symbols-rounded" style="vertical-align:bottom; margin-right:6px;">person</span>내 업무 및 일정 (마이페이지)</h2>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                    <div style="background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                        <h3 style="font-size: 1.05rem; margin-top: 0; margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 6px;"><span class="material-symbols-rounded">work</span> 내 업무</h3>
+                        <ul id="mypage-tasks" class="user-list" style="max-height: 400px; overflow-y: auto;"></ul>
+                    </div>
+                    <div style="background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                        <h3 style="font-size: 1.05rem; margin-top: 0; margin-bottom: 1rem; color: #8B5CF6; display: flex; align-items: center; gap: 6px;"><span class="material-symbols-rounded">flight_takeoff</span> 내 출장 일정</h3>
+                        <ul id="mypage-trips" class="user-list" style="max-height: 400px; overflow-y: auto;"></ul>
+                    </div>
+                    <div style="background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                        <h3 style="font-size: 1.05rem; margin-top: 0; margin-bottom: 1rem; color: #10B981; display: flex; align-items: center; gap: 6px;"><span class="material-symbols-rounded">beach_access</span> 내 휴가 결재</h3>
+                        <ul id="mypage-leaves" class="user-list" style="max-height: 400px; overflow-y: auto;"></ul>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
